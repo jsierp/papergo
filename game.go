@@ -9,15 +9,19 @@ import (
 
 type Game struct {
 	World     [][]uint8
-	PlayerX   int
-	PlayerY   int
+	PlayerX   float64
+	PlayerY   float64
 	Direction Direction
 }
 
 const Rows = 60
 const Cols = 100
-const FPS = 30
+const FPS = 100
 const FrameDuration = time.Second / FPS
+const Speed = 10.
+const eps = 1e-6
+
+const FrameDelta = 1. / FPS * Speed
 
 type Direction int
 
@@ -31,8 +35,8 @@ const (
 func NewGame() *Game {
 	return &Game{
 		World:     NewWorld(Rows, Cols),
-		PlayerX:   0,
-		PlayerY:   10,
+		PlayerX:   0.,
+		PlayerY:   10.,
 		Direction: Right,
 	}
 }
@@ -64,27 +68,19 @@ func (g *Game) Run() {
 	for {
 		<-ticker.C
 
-		r.Render(g.PlayerY, g.PlayerX, colorBlue)
+		r.Render(int(g.PlayerY), int(g.PlayerX), colorBlue)
 
 		switch g.Direction {
 		case Up:
-			if g.PlayerY > 0 {
-				g.PlayerY--
-			}
+			g.PlayerY = max(0, g.PlayerY-FrameDelta)
 		case Down:
-			if g.PlayerY < Rows {
-				g.PlayerY++
-			}
+			g.PlayerY = min(Rows-eps, g.PlayerY+FrameDelta)
 		case Right:
-			if g.PlayerX < Cols {
-				g.PlayerX++
-			}
+			g.PlayerX = min(Cols-eps, g.PlayerX+FrameDelta)
 		case Left:
-			if g.PlayerX > 0 {
-				g.PlayerX--
-			}
+			g.PlayerX = max(0, g.PlayerX-FrameDelta)
 		}
-		r.Render(g.PlayerY, g.PlayerX, colorRed)
+		r.Render(int(g.PlayerY), int(g.PlayerX), colorRed)
 	}
 }
 
@@ -98,6 +94,5 @@ func (g *Game) onKeyPressed(key string) {
 		g.Direction = Left
 	case ArrowRight:
 		g.Direction = Right
-
 	}
 }
