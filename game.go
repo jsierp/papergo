@@ -46,7 +46,7 @@ func NewWorld(rows int, cols int) [][]uint8 {
 }
 
 func (g *Game) Run() {
-	r := NewRendrer(g.World)
+	r := NewRenderer(g.World)
 
 	go InputHandler(g.onKeyPressed)
 
@@ -59,9 +59,12 @@ func (g *Game) Run() {
 		os.Exit(0)
 	}()
 
+	ticker := time.NewTicker(FrameDuration)
+
 	for {
-		start := time.Now()
-		r.Render(g.PlayerY, g.PlayerX, EmptySquare)
+		<-ticker.C
+
+		r.Render(g.PlayerY, g.PlayerX, colorBlue)
 
 		switch g.Direction {
 		case Up:
@@ -81,8 +84,7 @@ func (g *Game) Run() {
 				g.PlayerX--
 			}
 		}
-
-		time.Sleep(max(0, FrameDuration-time.Since(start)))
+		r.Render(g.PlayerY, g.PlayerX, colorRed)
 	}
 }
 
