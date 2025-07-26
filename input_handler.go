@@ -15,7 +15,7 @@ const (
 )
 
 func InputHandler(onKeyPressed func(key string)) {
-	_, err := term.MakeRaw(int(os.Stdin.Fd()))
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		panic(err)
 	}
@@ -36,6 +36,7 @@ func InputHandler(onKeyPressed func(key string)) {
 			log.Println("q pressed. Terminating.")
 			p, _ := os.FindProcess(os.Getpid())
 			p.Signal(syscall.SIGINT)
+			term.Restore(int(os.Stdin.Fd()), oldState)
 		}
 	}
 }
