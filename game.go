@@ -8,11 +8,24 @@ import (
 )
 
 type Game struct {
-	World     [][]uint8
+	World     [][]Cell
 	PlayerX   float64
 	PlayerY   float64
 	Direction Direction
 }
+
+type CellType uint8
+
+type Cell struct {
+	Player uint8
+	Type   CellType
+}
+
+const (
+	CellTypeEmpty CellType = iota
+	CellTypeTrace
+	CellTypeTaken
+)
 
 const Rows = 60
 const Cols = 100
@@ -35,17 +48,21 @@ const (
 func NewGame() *Game {
 	return &Game{
 		World:     NewWorld(Rows, Cols),
-		PlayerX:   0.,
+		PlayerX:   10.,
 		PlayerY:   10.,
 		Direction: Right,
 	}
 }
 
-func NewWorld(rows int, cols int) [][]uint8 {
-	world := make([][]uint8, rows)
+func NewWorld(rows int, cols int) [][]Cell {
+	world := make([][]Cell, rows)
 	for i := range rows {
-		world[i] = make([]uint8, cols)
+		world[i] = make([]Cell, cols)
 	}
+	world[9][9] = Cell{0, CellTypeTaken}
+	world[9][10] = Cell{0, CellTypeTaken}
+	world[10][9] = Cell{0, CellTypeTaken}
+	world[10][10] = Cell{0, CellTypeTaken}
 	return world
 }
 
@@ -78,7 +95,7 @@ func (g *Game) Run() {
 		case Left:
 			g.PlayerX = max(0, g.PlayerX-FrameDelta)
 		}
-		g.World[int(g.PlayerY)][int(g.PlayerX)] = 1
+		g.World[int(g.PlayerY)][int(g.PlayerX)].Type = CellTypeTrace
 		r.Refresh(g.World)
 	}
 }

@@ -20,16 +20,16 @@ const (
 type Renderer struct {
 	rows   int
 	cols   int
-	buffer [][]uint8
+	buffer [][]Cell
 }
 
 func NewRenderer(rows, cols int) *Renderer {
 	fmt.Print(alternateScreen)
 	fmt.Print(hideCursor)
 
-	buffer := make([][]uint8, rows)
+	buffer := make([][]Cell, rows)
 	for i := range rows {
-		buffer[i] = make([]uint8, cols)
+		buffer[i] = make([]Cell, cols)
 	}
 
 	return &Renderer{rows, cols, buffer}
@@ -45,16 +45,19 @@ func (r *Renderer) render(row int, col int, char string, color string) {
 	fmt.Printf("%s%s", color, char)
 }
 
-func (r *Renderer) Refresh(frame [][]uint8) {
+func (r *Renderer) Refresh(frame [][]Cell) {
 	for y := range r.rows {
 		for x := range r.cols {
 			if r.buffer[y][x] != frame[y][x] {
 				r.buffer[y][x] = frame[y][x]
-				r.render(y, x, Solid, colorBlue)
+
+				switch frame[y][x].Type {
+				case CellTypeTaken:
+					r.render(y, x, Solid, colorBlue)
+				case CellTypeTrace:
+					r.render(y, x, Striped, colorBlue)
+				}
 			}
-
 		}
-
 	}
-
 }
