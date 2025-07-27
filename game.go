@@ -68,7 +68,7 @@ func (g *Game) Run() {
 	for {
 		<-ticker.C
 
-		r.Render(int(g.PlayerY), int(g.PlayerX), colorBlue)
+		r.Render(int(g.PlayerY), int(g.PlayerX), Striped, colorBlue)
 
 		switch g.Direction {
 		case Up:
@@ -80,7 +80,7 @@ func (g *Game) Run() {
 		case Left:
 			g.PlayerX = max(0, g.PlayerX-FrameDelta)
 		}
-		r.Render(int(g.PlayerY), int(g.PlayerX), colorRed)
+		r.Render(int(g.PlayerY), int(g.PlayerX), Solid, colorBlue)
 	}
 }
 
