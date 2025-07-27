@@ -50,7 +50,7 @@ func NewWorld(rows int, cols int) [][]uint8 {
 }
 
 func (g *Game) Run() {
-	r := NewRenderer(g.World)
+	r := NewRenderer(Rows, Cols)
 
 	go InputHandler(g.onKeyPressed)
 
@@ -68,8 +68,6 @@ func (g *Game) Run() {
 	for {
 		<-ticker.C
 
-		r.Render(int(g.PlayerY), int(g.PlayerX), Striped, colorBlue)
-
 		switch g.Direction {
 		case Up:
 			g.PlayerY = max(0, g.PlayerY-FrameDelta)
@@ -80,7 +78,8 @@ func (g *Game) Run() {
 		case Left:
 			g.PlayerX = max(0, g.PlayerX-FrameDelta)
 		}
-		r.Render(int(g.PlayerY), int(g.PlayerX), Solid, colorBlue)
+		g.World[int(g.PlayerY)][int(g.PlayerX)] = 1
+		r.Refresh(g.World)
 	}
 }
 

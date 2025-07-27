@@ -18,14 +18,21 @@ const (
 )
 
 type Renderer struct {
-	World [][]uint8
+	rows   int
+	cols   int
+	buffer [][]uint8
 }
 
-func NewRenderer(world [][]uint8) *Renderer {
+func NewRenderer(rows, cols int) *Renderer {
 	fmt.Print(alternateScreen)
 	fmt.Print(hideCursor)
 
-	return &Renderer{World: world}
+	buffer := make([][]uint8, rows)
+	for i := range rows {
+		buffer[i] = make([]uint8, cols)
+	}
+
+	return &Renderer{rows, cols, buffer}
 }
 
 func (r *Renderer) Destroy() {
@@ -33,7 +40,21 @@ func (r *Renderer) Destroy() {
 	fmt.Print(showCursor)
 }
 
-func (r *Renderer) Render(row int, col int, char string, color string) {
+func (r *Renderer) render(row int, col int, char string, color string) {
 	fmt.Printf(cursorTo, row+1, col*2+1)
 	fmt.Printf("%s%s", color, char)
+}
+
+func (r *Renderer) Refresh(frame [][]uint8) {
+	for y := range r.rows {
+		for x := range r.cols {
+			if r.buffer[y][x] != frame[y][x] {
+				r.buffer[y][x] = frame[y][x]
+				r.render(y, x, Solid, colorBlue)
+			}
+
+		}
+
+	}
+
 }
