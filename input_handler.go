@@ -30,13 +30,13 @@ func InputHandler(onKeyPressed func(key string)) {
 		input := string(buffer[:n])
 
 		switch input {
-		case ArrowDown, ArrowLeft, ArrowRight, ArrowUp:
-			onKeyPressed(input)
 		case "q", "\x03":
 			log.Println("q pressed. Terminating.")
 			p, _ := os.FindProcess(os.Getpid())
 			p.Signal(syscall.SIGINT)
 			term.Restore(int(os.Stdin.Fd()), oldState)
+		default:
+			onKeyPressed(input)
 		}
 	}
 }

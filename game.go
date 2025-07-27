@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "log"
 	"os"
 	"os/signal"
 	"slices"
@@ -18,18 +17,20 @@ type Player struct {
 	MaxC      int
 	MaxR      int
 	Direction Direction
+	Id        uint8
+	Color     string
 }
 
 type Game struct {
-	World  [][]Cell
-	Player Player
+	World   [][]Cell
+	Players []*Player
 }
 
 type CellType uint8
 
 type Cell struct {
-	Player uint8
-	Type   CellType
+	PlayerId uint8
+	Type     CellType
 }
 
 const (
@@ -61,11 +62,20 @@ const (
 )
 
 func NewGame() *Game {
-	g := &Game{
-		World:  NewWorld(Rows, Cols),
-		Player: Player{X: 10., Y: 10.},
+	players := []*Player{
+		{X: 10., Y: 10., Id: 0, Color: ColorBlue},
+		{X: 40., Y: 40., Id: 1, Color: ColorRed},
 	}
-	g.World[int(g.Player.X)][int(g.Player.Y)].Type = CellTypeTaken
+	g := &Game{
+		World:   NewWorld(Rows, Cols),
+		Players: players,
+	}
+	for _, p := range players {
+		g.World[int(p.X)][int(p.Y)].Type = CellTypeTaken
+		g.World[int(p.X)][int(p.Y)].PlayerId = p.Id
+		p.MinR, p.MaxR = int(p.Y), int(p.Y)
+		p.MinC, p.MaxC = int(p.X), int(p.X)
+	}
 	return g
 }
 
@@ -95,62 +105,95 @@ func (g *Game) Run() {
 
 	for {
 		<-ticker.C
-		g.updatePosition()
+		g.updatePositions()
 		g.updateCells()
-		r.Refresh(g.World)
+		r.Refresh(g)
 	}
 }
 
 func (g *Game) onKeyPressed(key string) {
 	switch key {
-	case ArrowDown:
-		g.Player.Direction = Down
-	case ArrowUp:
-		g.Player.Direction = Up
-	case ArrowLeft:
-		g.Player.Direction = Left
-	case ArrowRight:
-		g.Player.Direction = Right
+	case ArrowDown, ArrowLeft, ArrowUp, ArrowRight:
+		if len(g.Players) < 1 {
+			return
+		}
+		p := g.Players[0]
+		switch key {
+		case ArrowDown:
+			p.Direction = Down
+		case ArrowUp:
+			p.Direction = Up
+		case ArrowLeft:
+			p.Direction = Left
+		case ArrowRight:
+			p.Direction = Right
+		}
+	case "w", "s", "a", "d":
+		if len(g.Players) < 2 {
+			return
+		}
+		p := g.Players[1]
+		switch key {
+		case "s":
+			p.Direction = Down
+		case "w":
+			p.Direction = Up
+		case "a":
+			p.Direction = Left
+		case "d":
+			p.Direction = Right
+		}
 	}
 }
 
-func (g *Game) updatePosition() {
-	switch g.Player.Direction {
+func (g *Game) updatePositions() {
+	for _, p := range g.Players {
+		p.updatePosition()
+	}
+}
+func (p *Player) updatePosition() {
+	switch p.Direction {
 	case Up:
-		g.Player.Y = max(0, g.Player.Y-FrameDelta)
+		p.Y = max(0, p.Y-FrameDelta)
 	case Down:
-		g.Player.Y = min(Rows-eps, g.Player.Y+FrameDelta)
+		p.Y = min(Rows-eps, p.Y+FrameDelta)
 	case Right:
-		g.Player.X = min(Cols-eps, g.Player.X+FrameDelta)
+		p.X = min(Cols-eps, p.X+FrameDelta)
 	case Left:
-		g.Player.X = max(0, g.Player.X-FrameDelta)
+		p.X = max(0, p.X-FrameDelta)
 	}
 }
 
 func (g *Game) updateCells() {
-	g.Player.updatePlayerBoundary()
+	for _, p := range g.Players {
+		g.updatePlayerCells(p)
+	}
+}
 
-	switch g.World[int(g.Player.Y)][int(g.Player.X)].Type {
+func (g *Game) updatePlayerCells(p *Player) {
+	p.updatePlayerBoundary()
+
+	switch g.World[int(p.Y)][int(p.X)].Type {
 	case CellTypeEmpty:
 		{
-			g.World[int(g.Player.Y)][int(g.Player.X)].Type = CellTypeTrace
-			if !g.Player.Trace {
-				g.Player.Trace = true
+			g.World[int(p.Y)][int(p.X)].Type = CellTypeTrace
+			g.World[int(p.Y)][int(p.X)].PlayerId = p.Id
+			if !p.Trace {
+				p.Trace = true
 			}
 		}
 	case CellTypeTaken:
 		{
-			if g.Player.Trace {
-				takenMask := g.getTakenMask()
+			if p.Trace && g.World[int(p.Y)][int(p.X)].PlayerId == p.Id {
+				takenMask := g.getTakenMask(p)
 				for i := range takenMask {
 					for j := range takenMask[i] {
 						if takenMask[i][j] {
-							g.World[g.Player.MinR+i][g.Player.MinC+j] = Cell{Type: CellTypeTaken}
+							g.World[p.MinR+i][p.MinC+j] = Cell{Type: CellTypeTaken, PlayerId: p.Id}
 						}
 					}
 				}
-
-				g.Player.Trace = false
+				p.Trace = false
 			}
 		}
 	}
@@ -163,9 +206,9 @@ func (p *Player) updatePlayerBoundary() {
 	p.MinR = min(p.MinR, int(p.Y))
 }
 
-func (g *Game) getTakenMask() [][]bool {
-	rows := g.Player.MaxR - g.Player.MinR + 1
-	cols := g.Player.MaxC - g.Player.MinC + 1
+func (g *Game) getTakenMask(p *Player) [][]bool {
+	rows := p.MaxR - p.MinR + 1
+	cols := p.MaxC - p.MinC + 1
 	mask := make([][]bool, rows)
 	for i := range rows {
 		mask[i] = slices.Repeat([]bool{true}, cols)
@@ -173,35 +216,35 @@ func (g *Game) getTakenMask() [][]bool {
 
 	var q []Point
 	for i := range rows {
-		considerPoint(&q, Point{i, 0}, g, mask)
-		considerPoint(&q, Point{i, cols - 1}, g, mask)
+		considerPoint(&q, Point{i, 0}, g, p, mask)
+		considerPoint(&q, Point{i, cols - 1}, g, p, mask)
 	}
 	for i := range cols {
-		considerPoint(&q, Point{0, i}, g, mask)
-		considerPoint(&q, Point{rows - 1, i}, g, mask)
+		considerPoint(&q, Point{0, i}, g, p, mask)
+		considerPoint(&q, Point{rows - 1, i}, g, p, mask)
 	}
 
 	for i := 0; i < len(q); i++ {
 		if q[i].R > 0 {
-			considerPoint(&q, Point{q[i].R - 1, q[i].C}, g, mask)
+			considerPoint(&q, Point{q[i].R - 1, q[i].C}, g, p, mask)
 		}
 		if q[i].C > 0 {
-			considerPoint(&q, Point{q[i].R, q[i].C - 1}, g, mask)
+			considerPoint(&q, Point{q[i].R, q[i].C - 1}, g, p, mask)
 		}
 		if q[i].R < rows-1 {
-			considerPoint(&q, Point{q[i].R + 1, q[i].C}, g, mask)
+			considerPoint(&q, Point{q[i].R + 1, q[i].C}, g, p, mask)
 		}
 		if q[i].C < cols-1 {
-			considerPoint(&q, Point{q[i].R, q[i].C + 1}, g, mask)
+			considerPoint(&q, Point{q[i].R, q[i].C + 1}, g, p, mask)
 		}
 	}
 	return mask
 }
 
-func considerPoint(q *[]Point, p Point, g *Game, mask [][]bool) {
-	c := g.World[g.Player.MinR+p.R][g.Player.MinC+p.C]
-	if c.Type == CellTypeEmpty && mask[p.R][p.C] {
-		*q = append(*q, Point{p.R, p.C})
-		mask[p.R][p.C] = false
+func considerPoint(q *[]Point, point Point, g *Game, p *Player, mask [][]bool) {
+	c := g.World[p.MinR+point.R][p.MinC+point.C]
+	if (c.Type == CellTypeEmpty || c.PlayerId != p.Id) && mask[point.R][point.C] {
+		*q = append(*q, Point{point.R, point.C})
+		mask[point.R][point.C] = false
 	}
 }

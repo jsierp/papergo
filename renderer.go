@@ -4,8 +4,8 @@ import "fmt"
 
 const (
 	cursorTo        = "\033[%d;%dH"
-	colorBlue       = "\033[34m"
-	colorRed        = "\033[31m"
+	ColorBlue       = "\033[34m"
+	ColorRed        = "\033[31m"
 	colorReset      = "\033[0m"
 	clearScreen     = "\033[2J"   // Clears the entire screen
 	cursorHome      = "\033[H"    // Moves cursor to home position (1,1)
@@ -45,7 +45,9 @@ func (r *Renderer) render(row int, col int, char string, color string) {
 	fmt.Printf("%s%s", color, char)
 }
 
-func (r *Renderer) Refresh(frame [][]Cell) {
+func (r *Renderer) Refresh(g *Game) {
+	frame := g.World
+
 	for y := range r.rows {
 		for x := range r.cols {
 			if r.buffer[y][x] != frame[y][x] {
@@ -53,9 +55,9 @@ func (r *Renderer) Refresh(frame [][]Cell) {
 
 				switch frame[y][x].Type {
 				case CellTypeTaken:
-					r.render(y, x, Solid, colorBlue)
+					r.render(y, x, Solid, g.Players[frame[y][x].PlayerId].Color)
 				case CellTypeTrace:
-					r.render(y, x, Striped, colorBlue)
+					r.render(y, x, Striped, g.Players[frame[y][x].PlayerId].Color)
 				}
 			}
 		}
