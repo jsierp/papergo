@@ -175,26 +175,15 @@ func (g *Game) updatePlayerCells(p *Player) {
 
 	switch g.World[int(p.Y)][int(p.X)].Type {
 	case CellTypeEmpty:
-		{
-			g.World[int(p.Y)][int(p.X)].Type = CellTypeTrace
-			g.World[int(p.Y)][int(p.X)].PlayerId = p.Id
-			if !p.Trace {
-				p.Trace = true
-			}
+		g.World[int(p.Y)][int(p.X)].Type = CellTypeTrace
+		g.World[int(p.Y)][int(p.X)].PlayerId = p.Id
+		if !p.Trace {
+			p.Trace = true
 		}
 	case CellTypeTaken:
-		{
-			if p.Trace && g.World[int(p.Y)][int(p.X)].PlayerId == p.Id {
-				takenMask := g.getTakenMask(p)
-				for i := range takenMask {
-					for j := range takenMask[i] {
-						if takenMask[i][j] {
-							g.World[p.MinR+i][p.MinC+j] = Cell{Type: CellTypeTaken, PlayerId: p.Id}
-						}
-					}
-				}
-				p.Trace = false
-			}
+		if p.Trace && g.World[int(p.Y)][int(p.X)].PlayerId == p.Id {
+			g.fillTrace(p)
+			p.Trace = false
 		}
 	}
 }
@@ -204,6 +193,17 @@ func (p *Player) updatePlayerBoundary() {
 	p.MinC = min(p.MinC, int(p.X))
 	p.MaxR = max(p.MaxR, int(p.Y))
 	p.MinR = min(p.MinR, int(p.Y))
+}
+
+func (g *Game) fillTrace(p *Player) {
+	takenMask := g.getTakenMask(p)
+	for i := range takenMask {
+		for j := range takenMask[i] {
+			if takenMask[i][j] {
+				g.World[p.MinR+i][p.MinC+j] = Cell{Type: CellTypeTaken, PlayerId: p.Id}
+			}
+		}
+	}
 }
 
 func (g *Game) getTakenMask(p *Player) [][]bool {
