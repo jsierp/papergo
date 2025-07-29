@@ -4,7 +4,6 @@ import (
 	"golang.org/x/term"
 	"log"
 	"os"
-	"syscall"
 )
 
 const (
@@ -14,12 +13,24 @@ const (
 	ArrowLeft  = "\033[D"
 )
 
-func InputHandler(onKeyPressed func(key string)) {
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+type KeyboardInputHandler struct {
+	oldTerminalState *term.State
+	playerService    PlayerService
+}
+
+func NewKeyboardInputHandler(ps PlayerService) KeyboardInputHandler {
+	oldTerminalState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		panic(err)
 	}
 
+	return KeyboardInputHandler{
+		playerService:    ps,
+		oldTerminalState: oldTerminalState,
+	}
+}
+
+func (k *KeyboardInputHandler) Listen() {
 	buffer := make([]byte, 4)
 	for {
 		n, err := os.Stdin.Read(buffer)
@@ -32,11 +43,23 @@ func InputHandler(onKeyPressed func(key string)) {
 		switch input {
 		case "q", "\x03":
 			log.Println("q pressed. Terminating.")
-			p, _ := os.FindProcess(os.Getpid())
-			p.Signal(syscall.SIGINT)
-			term.Restore(int(os.Stdin.Fd()), oldState)
+			k.playerService.Quit()
+			return
+		case ArrowLeft:
+			k.playerService.TurnLeft(0)
+		case ArrowRight:
+			k.playerService.TurnRight(0)
+		case "a":
+			k.playerService.TurnLeft(1)
+		case "d":
+			k.playerService.TurnRight(1)
 		default:
-			onKeyPressed(input)
+			//k.playerService.Join()
 		}
 	}
+
+}
+
+func (k *KeyboardInputHandler) Close() {
+	term.Restore(int(os.Stdin.Fd()), k.oldTerminalState)
 }
