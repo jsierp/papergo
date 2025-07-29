@@ -35,7 +35,7 @@ func NewRenderer(rows, cols int) *Renderer {
 	return &Renderer{rows, cols, buffer}
 }
 
-func (r *Renderer) Destroy() {
+func (r *Renderer) Close() {
 	fmt.Print(mainScreen)
 	fmt.Print(showCursor)
 }

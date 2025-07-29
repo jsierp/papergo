@@ -1,10 +1,7 @@
 package main
 
 import (
-	"os"
-	"os/signal"
 	"slices"
-	"syscall"
 	"time"
 )
 
@@ -17,19 +14,30 @@ type Player struct {
 	MaxC      int
 	MaxR      int
 	Direction Direction
-	Id        uint8
+	Id        int
 	Color     string
 }
 
 type Game struct {
-	World   [][]Cell
-	Players []*Player
+	World     [][]Cell
+	Players   []*Player
+	IsRunning bool
+	Closing   bool
+}
+
+type PlayerService interface {
+	Join() int
+	// Leave()
+	// Pause()
+	Close()
+	TurnLeft(int)
+	TurnRight(int)
 }
 
 type CellType uint8
 
 type Cell struct {
-	PlayerId uint8
+	PlayerId int
 	Type     CellType
 }
 
@@ -55,10 +63,10 @@ type Point struct {
 }
 
 const (
-	Left Direction = iota
+	Up Direction = iota
 	Right
-	Up
 	Down
+	Left
 )
 
 func NewGame() *Game {
@@ -89,60 +97,15 @@ func NewWorld(rows int, cols int) [][]Cell {
 
 func (g *Game) Run() {
 	r := NewRenderer(Rows, Cols)
-
-	go InputHandler(g.onKeyPressed)
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		<-c
-		r.Destroy()
-		os.Exit(0)
-	}()
+	defer r.Close()
 
 	ticker := time.NewTicker(FrameDuration)
 
-	for {
+	for !g.Closing {
 		<-ticker.C
 		g.updatePositions()
 		g.updateCells()
 		r.Refresh(g)
-	}
-}
-
-func (g *Game) onKeyPressed(key string) {
-	switch key {
-	case ArrowDown, ArrowLeft, ArrowUp, ArrowRight:
-		if len(g.Players) < 1 {
-			return
-		}
-		p := g.Players[0]
-		switch key {
-		case ArrowDown:
-			p.Direction = Down
-		case ArrowUp:
-			p.Direction = Up
-		case ArrowLeft:
-			p.Direction = Left
-		case ArrowRight:
-			p.Direction = Right
-		}
-	case "w", "s", "a", "d":
-		if len(g.Players) < 2 {
-			return
-		}
-		p := g.Players[1]
-		switch key {
-		case "s":
-			p.Direction = Down
-		case "w":
-			p.Direction = Up
-		case "a":
-			p.Direction = Left
-		case "d":
-			p.Direction = Right
-		}
 	}
 }
 
@@ -162,6 +125,22 @@ func (p *Player) updatePosition() {
 	case Left:
 		p.X = max(0, p.X-FrameDelta)
 	}
+}
+
+func (g *Game) Close() {
+	g.Closing = true
+}
+
+func (g *Game) TurnLeft(p int) {
+	g.Players[p].Direction = (g.Players[p].Direction + 3) % 4
+}
+
+func (g *Game) TurnRight(p int) {
+	g.Players[p].Direction = (g.Players[p].Direction + 1) % 4
+}
+
+func (g *Game) Join() int {
+	return len(g.Players)
 }
 
 func (g *Game) updateCells() {
