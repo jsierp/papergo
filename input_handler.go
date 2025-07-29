@@ -41,9 +41,9 @@ func (k *KeyboardInputHandler) Listen() {
 		input := string(buffer[:n])
 
 		switch input {
-		case "q", "\x03":
-			log.Println("q pressed. Terminating.")
-			k.playerService.Quit()
+		case "q", "\x03", "\x1B":
+			log.Println("Closing the game.")
+			k.playerService.Close()
 			return
 		case ArrowLeft:
 			k.playerService.TurnLeft(0)

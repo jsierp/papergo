@@ -22,14 +22,14 @@ type Game struct {
 	World     [][]Cell
 	Players   []*Player
 	IsRunning bool
-	IsQuited  bool
+	Closing   bool
 }
 
 type PlayerService interface {
 	Join() int
 	// Leave()
 	// Pause()
-	Quit()
+	Close()
 	TurnLeft(int)
 	TurnRight(int)
 }
@@ -101,7 +101,7 @@ func (g *Game) Run() {
 
 	ticker := time.NewTicker(FrameDuration)
 
-	for !g.IsQuited {
+	for !g.Closing {
 		<-ticker.C
 		g.updatePositions()
 		g.updateCells()
@@ -127,8 +127,8 @@ func (p *Player) updatePosition() {
 	}
 }
 
-func (g *Game) Quit() {
-	g.IsQuited = true
+func (g *Game) Close() {
+	g.Closing = true
 }
 
 func (g *Game) TurnLeft(p int) {

@@ -5,7 +5,7 @@ func main() {
 
 	keyboard := NewKeyboardInputHandler(game)
 	go keyboard.Listen()
-	defer keyboard.Destroy()
+	defer keyboard.Close()
 
 	game.Run()
 }
