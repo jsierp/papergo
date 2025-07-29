@@ -2,6 +2,7 @@ package main
 
 import (
 	"slices"
+	"sync"
 	"time"
 )
 
@@ -19,16 +20,17 @@ type Player struct {
 }
 
 type Game struct {
-	World     [][]Cell
-	Players   []*Player
-	IsRunning bool
-	Closing   bool
+	World        [][]Cell
+	Players      []*Player
+	IsRunning    bool
+	Closing      bool
+	playersMutex sync.Mutex
 }
 
 type PlayerService interface {
 	Join() int
 	// Leave()
-	// Pause()
+	ToggleIsRunning()
 	Close()
 	TurnLeft(int)
 	TurnRight(int)
@@ -69,20 +71,14 @@ const (
 	Left
 )
 
+var PlayerDefaults []Player = []Player{
+	{X: 10., Y: 10., Id: 0, Color: ColorBlue},
+	{X: 40., Y: 40., Id: 1, Color: ColorRed},
+}
+
 func NewGame() *Game {
-	players := []*Player{
-		{X: 10., Y: 10., Id: 0, Color: ColorBlue},
-		{X: 40., Y: 40., Id: 1, Color: ColorRed},
-	}
 	g := &Game{
-		World:   NewWorld(Rows, Cols),
-		Players: players,
-	}
-	for _, p := range players {
-		g.World[int(p.X)][int(p.Y)].Type = CellTypeTaken
-		g.World[int(p.X)][int(p.Y)].PlayerId = p.Id
-		p.MinR, p.MaxR = int(p.Y), int(p.Y)
-		p.MinC, p.MaxC = int(p.X), int(p.X)
+		World: NewWorld(Rows, Cols),
 	}
 	return g
 }
@@ -103,8 +99,10 @@ func (g *Game) Run() {
 
 	for !g.Closing {
 		<-ticker.C
-		g.updatePositions()
-		g.updateCells()
+		if g.IsRunning {
+			g.updatePositions()
+			g.updateCells()
+		}
 		r.Refresh(g)
 	}
 }
@@ -140,7 +138,22 @@ func (g *Game) TurnRight(p int) {
 }
 
 func (g *Game) Join() int {
-	return len(g.Players)
+	g.playersMutex.Lock()
+	pId := len(g.Players)
+	g.Players = append(g.Players, &PlayerDefaults[pId])
+	g.playersMutex.Unlock()
+
+	p := g.Players[pId]
+	g.World[int(p.X)][int(p.Y)].Type = CellTypeTaken
+	g.World[int(p.X)][int(p.Y)].PlayerId = p.Id
+	p.MinR, p.MaxR = int(p.Y), int(p.Y)
+	p.MinC, p.MaxC = int(p.X), int(p.X)
+
+	return pId
+}
+
+func (g *Game) ToggleIsRunning() {
+	g.IsRunning = !g.IsRunning
 }
 
 func (g *Game) updateCells() {

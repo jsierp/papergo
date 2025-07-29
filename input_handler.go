@@ -11,11 +11,16 @@ const (
 	ArrowDown  = "\033[B"
 	ArrowRight = "\033[C"
 	ArrowLeft  = "\033[D"
+	CtrlC      = "\x03"
+	Esc        = "\x1B"
+	Space      = " "
 )
 
 type KeyboardInputHandler struct {
 	oldTerminalState *term.State
 	playerService    PlayerService
+	arrowsPId        int
+	wsadPId          int
 }
 
 func NewKeyboardInputHandler(ps PlayerService) KeyboardInputHandler {
@@ -27,6 +32,8 @@ func NewKeyboardInputHandler(ps PlayerService) KeyboardInputHandler {
 	return KeyboardInputHandler{
 		playerService:    ps,
 		oldTerminalState: oldTerminalState,
+		arrowsPId:        -1,
+		wsadPId:          -1,
 	}
 }
 
@@ -40,24 +47,39 @@ func (k *KeyboardInputHandler) Listen() {
 		}
 		input := string(buffer[:n])
 
+		k.ensureJoined(input)
+
 		switch input {
-		case "q", "\x03", "\x1B":
+		case "q", CtrlC, Esc:
 			log.Println("Closing the game.")
 			k.playerService.Close()
 			return
 		case ArrowLeft:
-			k.playerService.TurnLeft(0)
+			k.playerService.TurnLeft(k.arrowsPId)
 		case ArrowRight:
-			k.playerService.TurnRight(0)
+			k.playerService.TurnRight(k.arrowsPId)
 		case "a":
-			k.playerService.TurnLeft(1)
+			k.playerService.TurnLeft(k.wsadPId)
 		case "d":
-			k.playerService.TurnRight(1)
-		default:
-			//k.playerService.Join()
+			k.playerService.TurnRight(k.wsadPId)
+		case Space:
+			k.playerService.ToggleIsRunning()
 		}
 	}
 
+}
+
+func (k *KeyboardInputHandler) ensureJoined(input string) {
+	switch input {
+	case ArrowLeft, ArrowRight:
+		if k.arrowsPId == -1 {
+			k.arrowsPId = k.playerService.Join()
+		}
+	case "a", "d":
+		if k.wsadPId == -1 {
+			k.wsadPId = k.playerService.Join()
+		}
+	}
 }
 
 func (k *KeyboardInputHandler) Close() {
