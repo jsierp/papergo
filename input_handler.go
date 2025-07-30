@@ -1,9 +1,11 @@
 package main
 
 import (
-	"golang.org/x/term"
 	"log"
 	"os"
+
+	"github.com/google/uuid"
+	"golang.org/x/term"
 )
 
 const (
@@ -19,8 +21,8 @@ const (
 type KeyboardInputHandler struct {
 	oldTerminalState *term.State
 	playerService    PlayerService
-	arrowsPId        int
-	wsadPId          int
+	arrowsPId        uuid.UUID
+	wsadPId          uuid.UUID
 }
 
 func NewKeyboardInputHandler(ps PlayerService) KeyboardInputHandler {
@@ -32,8 +34,8 @@ func NewKeyboardInputHandler(ps PlayerService) KeyboardInputHandler {
 	return KeyboardInputHandler{
 		playerService:    ps,
 		oldTerminalState: oldTerminalState,
-		arrowsPId:        -1,
-		wsadPId:          -1,
+		arrowsPId:        uuid.New(),
+		wsadPId:          uuid.New(),
 	}
 }
 
@@ -72,13 +74,10 @@ func (k *KeyboardInputHandler) Listen() {
 func (k *KeyboardInputHandler) ensureJoined(input string) {
 	switch input {
 	case ArrowLeft, ArrowRight:
-		if k.arrowsPId == -1 {
-			k.arrowsPId = k.playerService.Join()
-		}
+		k.playerService.Join(k.arrowsPId)
 	case "a", "d":
-		if k.wsadPId == -1 {
-			k.wsadPId = k.playerService.Join()
-		}
+		k.playerService.Join(k.wsadPId)
+
 	}
 }
 

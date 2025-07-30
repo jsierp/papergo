@@ -3,9 +3,16 @@ package main
 import "fmt"
 
 const (
-	cursorTo        = "\033[%d;%dH"
-	ColorBlue       = "\033[34m"
-	ColorRed        = "\033[31m"
+	cursorTo = "\033[%d;%dH"
+
+	ColorRed     = "\033[31m"
+	ColorGreen   = "\033[32m"
+	ColorYellow  = "\033[33m"
+	ColorBlue    = "\033[34m"
+	ColorMagenta = "\033[35m"
+	ColorCyan    = "\033[36m"
+	ColorWhite   = "\033[37m"
+
 	colorReset      = "\033[0m"
 	clearScreen     = "\033[2J"   // Clears the entire screen
 	cursorHome      = "\033[H"    // Moves cursor to home position (1,1)
