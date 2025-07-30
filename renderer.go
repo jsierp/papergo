@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	cursorTo = "\033[%d;%dH"
@@ -60,12 +62,11 @@ func (r *Renderer) Refresh(g *Game) {
 			if r.buffer[y][x] != frame[y][x] {
 				r.buffer[y][x] = frame[y][x]
 
-				switch frame[y][x].Type {
-				case CellTypeTaken:
-					r.render(y, x, Solid, g.Players[frame[y][x].PlayerId].Color)
-				case CellTypeTrace:
-					r.render(y, x, Striped, g.Players[frame[y][x].PlayerId].Color)
-				case CellTypeEmpty:
+				if frame[y][x].TracePlayerId != 0 {
+					r.render(y, x, Striped, PlayerColors[frame[y][x].TracePlayerId-1])
+				} else if frame[y][x].TakenPlayerId != 0 {
+					r.render(y, x, Solid, PlayerColors[frame[y][x].TakenPlayerId-1])
+				} else {
 					r.render(y, x, "  ", colorReset)
 				}
 			}
