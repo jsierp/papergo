@@ -16,6 +16,7 @@ type Player struct {
 	Direction Direction
 	Id        int
 	Color     string
+	Dead      bool
 }
 
 type Game struct {
@@ -111,7 +112,9 @@ func (g *Game) Run() {
 
 func (g *Game) updatePositions() {
 	for _, p := range g.Players {
-		p.updatePosition()
+		if !p.Dead {
+			p.updatePosition()
+		}
 	}
 }
 func (p *Player) updatePosition() {
@@ -145,7 +148,9 @@ func (g *Game) Join() int {
 
 func (g *Game) updateCells() {
 	for _, p := range g.Players {
-		g.updatePlayerCells(p)
+		if !p.Dead {
+			g.updatePlayerCells(p)
+		}
 	}
 }
 
@@ -163,6 +168,10 @@ func (g *Game) updatePlayerCells(p *Player) {
 		if p.Trace && g.World[int(p.Y)][int(p.X)].PlayerId == p.Id {
 			g.fillTrace(p)
 			p.Trace = false
+		}
+	case CellTypeTrace:
+		if pId := g.World[int(p.Y)][int(p.X)].PlayerId; pId != p.Id {
+			g.killPlayer(pId)
 		}
 	}
 }
@@ -225,5 +234,18 @@ func considerPoint(q *[]Point, point Point, g *Game, p *Player, mask [][]bool) {
 	if (c.Type == CellTypeEmpty || c.PlayerId != p.Id) && mask[point.R][point.C] {
 		*q = append(*q, Point{point.R, point.C})
 		mask[point.R][point.C] = false
+	}
+}
+
+func (g *Game) killPlayer(pId int) {
+	p := g.Players[pId]
+	p.Dead = true
+	for i := range g.World {
+		for j := range g.World[i] {
+			if g.World[i][j].PlayerId == p.Id {
+				g.World[i][j].Type = CellTypeEmpty
+				g.World[i][j].PlayerId = 0
+			}
+		}
 	}
 }

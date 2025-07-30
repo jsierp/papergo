@@ -58,6 +58,8 @@ func (r *Renderer) Refresh(g *Game) {
 					r.render(y, x, Solid, g.Players[frame[y][x].PlayerId].Color)
 				case CellTypeTrace:
 					r.render(y, x, Striped, g.Players[frame[y][x].PlayerId].Color)
+				case CellTypeEmpty:
+					r.render(y, x, "  ", colorReset)
 				}
 			}
 		}
