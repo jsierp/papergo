@@ -30,7 +30,7 @@ type Game struct {
 
 type PlayerService interface {
 	Join() int
-	Leave()
+	// Leave()
 	ToggleIsRunning()
 	Close()
 	TurnLeft(int)
