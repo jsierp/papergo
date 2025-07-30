@@ -1,9 +1,12 @@
 package main
 
 import (
+	"math/rand"
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Player struct {
@@ -15,32 +18,31 @@ type Player struct {
 	MaxC      int
 	MaxR      int
 	Direction Direction
-	Id        int
+	Id        uuid.UUID
 	Color     string
-	Dead      bool
 }
 
 type Game struct {
 	World        [][]Cell
-	Players      []*Player
+	Players      map[uuid.UUID]*Player
 	IsRunning    bool
 	Closing      bool
 	playersMutex sync.Mutex
 }
 
 type PlayerService interface {
-	Join() int
+	Join(uuid.UUID)
 	// Leave()
 	ToggleIsRunning()
 	Close()
-	TurnLeft(int)
-	TurnRight(int)
+	TurnLeft(uuid.UUID)
+	TurnRight(uuid.UUID)
 }
 
 type CellType uint8
 
 type Cell struct {
-	PlayerId int
+	PlayerId uuid.UUID
 	Type     CellType
 }
 
@@ -72,14 +74,20 @@ const (
 	Left
 )
 
-var PlayerDefaults []Player = []Player{
-	{X: 10., Y: 10., Id: 0, Color: ColorBlue},
-	{X: 40., Y: 40., Id: 1, Color: ColorRed},
+var PlayerColors = []string{
+	ColorBlue,
+	ColorRed,
+	ColorGreen,
+	ColorYellow,
+	ColorMagenta,
+	ColorCyan,
+	ColorWhite,
 }
 
 func NewGame() *Game {
 	g := &Game{
-		World: NewWorld(Rows, Cols),
+		World:   NewWorld(Rows, Cols),
+		Players: map[uuid.UUID]*Player{},
 	}
 	return g
 }
@@ -110,9 +118,7 @@ func (g *Game) Run() {
 
 func (g *Game) updatePositions() {
 	for _, p := range g.Players {
-		if !p.Dead {
-			p.updatePosition()
-		}
+		p.updatePosition()
 	}
 }
 func (p *Player) updatePosition() {
@@ -132,27 +138,63 @@ func (g *Game) Close() {
 	g.Closing = true
 }
 
-func (g *Game) TurnLeft(p int) {
-	g.Players[p].Direction = (g.Players[p].Direction + 3) % 4
+func (g *Game) TurnLeft(p uuid.UUID) {
+	player, ok := g.Players[p]
+	if !ok {
+		return
+	}
+	player.Direction = (player.Direction + 3) % 4
 }
 
-func (g *Game) TurnRight(p int) {
-	g.Players[p].Direction = (g.Players[p].Direction + 1) % 4
+func (g *Game) TurnRight(p uuid.UUID) {
+	player, ok := g.Players[p]
+	if !ok {
+		return
+	}
+	player.Direction = (player.Direction + 1) % 4
 }
 
-func (g *Game) Join() int {
+func (g *Game) Join(pId uuid.UUID) {
 	g.playersMutex.Lock()
-	pId := len(g.Players)
-	g.Players = append(g.Players, &PlayerDefaults[pId])
-	g.playersMutex.Unlock()
+	defer g.playersMutex.Unlock()
 
-	p := g.Players[pId]
-	g.World[int(p.X)][int(p.Y)].Type = CellTypeTaken
-	g.World[int(p.X)][int(p.Y)].PlayerId = p.Id
+	if _, ok := g.Players[pId]; ok {
+		return
+	}
+
+	p := &Player{
+		Id:        pId,
+		X:         float64(rand.Intn(Cols)),
+		Y:         float64(rand.Intn(Rows)),
+		Direction: Right,
+		Color:     g.getColor(),
+	}
+
 	p.MinR, p.MaxR = int(p.Y), int(p.Y)
 	p.MinC, p.MaxC = int(p.X), int(p.X)
+	g.World[int(p.Y)][int(p.X)].Type = CellTypeTaken
+	g.World[int(p.Y)][int(p.X)].PlayerId = p.Id
 
-	return pId
+	g.Players[p.Id] = p
+}
+
+func (g *Game) getColor() string {
+	for _, color := range PlayerColors {
+		if !g.isColorUsed(color) {
+			return color
+		}
+	}
+	return ColorWhite
+}
+
+func (g *Game) isColorUsed(color string) bool {
+	for _, p := range g.Players {
+		if p.Color == color {
+			return true
+		}
+	}
+	return false
+
 }
 
 func (g *Game) ToggleIsRunning() {
@@ -161,9 +203,7 @@ func (g *Game) ToggleIsRunning() {
 
 func (g *Game) updateCells() {
 	for _, p := range g.Players {
-		if !p.Dead {
-			g.updatePlayerCells(p)
-		}
+		g.updatePlayerCells(p)
 	}
 }
 
@@ -250,15 +290,20 @@ func considerPoint(q *[]Point, point Point, g *Game, p *Player, mask [][]bool) {
 	}
 }
 
-func (g *Game) killPlayer(pId int) {
-	p := g.Players[pId]
-	p.Dead = true
+func (g *Game) killPlayer(pId uuid.UUID) {
+	p, ok := g.Players[pId]
+	if !ok {
+		return
+	}
+
 	for i := range g.World {
 		for j := range g.World[i] {
 			if g.World[i][j].PlayerId == p.Id {
 				g.World[i][j].Type = CellTypeEmpty
-				g.World[i][j].PlayerId = 0
+				g.World[i][j].PlayerId = uuid.Nil
 			}
 		}
 	}
+
+	delete(g.Players, pId)
 }
