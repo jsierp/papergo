@@ -167,7 +167,7 @@ func (g *Game) Join(pId uuid.UUID) {
 		X:         float64(rand.Intn(Cols)),
 		Y:         float64(rand.Intn(Rows)),
 		Direction: Right,
-		Color:     g.getColor(),
+		Color:     g.getNextAvailablePlayerColor(),
 	}
 
 	p.MinR, p.MaxR = int(p.Y), int(p.Y)
@@ -178,7 +178,7 @@ func (g *Game) Join(pId uuid.UUID) {
 	g.Players[p.Id] = p
 }
 
-func (g *Game) getColor() string {
+func (g *Game) getNextAvailablePlayerColor() string {
 	for _, color := range PlayerColors {
 		if !g.isColorUsed(color) {
 			return color
@@ -194,7 +194,6 @@ func (g *Game) isColorUsed(color string) bool {
 		}
 	}
 	return false
-
 }
 
 func (g *Game) ToggleIsRunning() {
