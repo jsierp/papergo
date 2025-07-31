@@ -21,7 +21,6 @@ type Player struct {
 	MaxR      int
 	Direction Direction
 	Id        PlayerId
-	Color     string
 }
 
 type Game struct {
@@ -46,13 +45,15 @@ type Cell struct {
 	TracePlayerId PlayerId
 }
 
-const Rows = 60
-const Cols = 100
-const FPS = 100
-const FrameDuration = time.Second / FPS
-const Speed = 10.
-const eps = 1e-6
-const FrameDelta = 1. / FPS * Speed
+const (
+	Rows          = 60
+	Cols          = 100
+	FPS           = 100
+	FrameDuration = time.Second / FPS
+	Speed         = 10.
+	eps           = 1e-6
+	FrameDelta    = 1. / FPS * Speed
+)
 
 type Direction int
 
@@ -66,16 +67,6 @@ const (
 	Down
 	Left
 )
-
-var PlayerColors = []string{
-	ColorBlue,
-	ColorRed,
-	ColorGreen,
-	ColorYellow,
-	ColorMagenta,
-	ColorCyan,
-	ColorWhite,
-}
 
 func NewGame() *Game {
 	g := &Game{
@@ -114,6 +105,7 @@ func (g *Game) updatePositions() {
 		p.updatePosition()
 	}
 }
+
 func (p *Player) updatePosition() {
 	switch p.Direction {
 	case Up:
@@ -291,5 +283,4 @@ func (g *Game) killPlayer(pId PlayerId) {
 			}
 		}
 	}
-
 }

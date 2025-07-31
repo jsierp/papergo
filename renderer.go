@@ -24,7 +24,18 @@ const (
 	mainScreen      = "\033[?1049l"
 	Solid           = "██"
 	Striped         = "░░"
+	Head            = "🟔 "
 )
+
+var PlayerColors = []string{
+	ColorBlue,
+	ColorRed,
+	ColorGreen,
+	ColorYellow,
+	ColorMagenta,
+	ColorCyan,
+	ColorWhite,
+}
 
 type Renderer struct {
 	rows   int
@@ -71,5 +82,10 @@ func (r *Renderer) Refresh(g *Game) {
 				}
 			}
 		}
+	}
+
+	for _, p := range g.Players {
+		r.render(int(p.Y), int(p.X), Head, PlayerColors[p.Id-1])
+		r.buffer[int(p.Y)][int(p.X)] = Cell{}
 	}
 }
