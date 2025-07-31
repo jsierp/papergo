@@ -25,9 +25,20 @@ const (
 	showCursor      = "\033[?25h" // Shows the cursor
 	alternateScreen = "\033[?1049h"
 	mainScreen      = "\033[?1049l"
-	Solid           = "██"
+	Solid           = "▓▓"
 	Striped         = "░░"
+	Head            = "██"
 )
+
+var PlayerColors = []string{
+	ColorBlue,
+	ColorRed,
+	ColorGreen,
+	ColorYellow,
+	ColorMagenta,
+	ColorCyan,
+	ColorWhite,
+}
 
 type Renderer struct {
 	width  int
@@ -64,18 +75,24 @@ func (r *Renderer) Refresh(g *Game) {
 
 	for y := range r.height {
 		for x := range r.width {
-			if r.buffer[y][x] != frame[y][x] {
-				r.buffer[y][x] = frame[y][x]
+			if r.buffer[y][x] == frame[y][x] {
+				continue
+			}
+			r.buffer[y][x] = frame[y][x]
 
-				if frame[y][x].TracePlayerId != 0 {
-					r.render(y, x, Striped, PlayerColors[frame[y][x].TracePlayerId-1])
-				} else if frame[y][x].TakenPlayerId != 0 {
-					r.render(y, x, Solid, PlayerColors[frame[y][x].TakenPlayerId-1])
-				} else {
-					r.render(y, x, "  ", colorReset)
-				}
+			if frame[y][x].TracePlayerId != 0 {
+				r.render(y, x, Striped, PlayerColors[frame[y][x].TracePlayerId-1])
+			} else if frame[y][x].TakenPlayerId != 0 {
+				r.render(y, x, Solid, PlayerColors[frame[y][x].TakenPlayerId-1])
+			} else {
+				r.render(y, x, "  ", colorReset)
 			}
 		}
+	}
+
+	for _, p := range g.Players {
+		r.render(int(p.Y), int(p.X), Head, PlayerColors[p.Id-1])
+		r.buffer[int(p.Y)][int(p.X)] = Cell{}
 	}
 }
 
