@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+
+	"golang.org/x/term"
 )
 
 const (
@@ -32,9 +35,11 @@ type Renderer struct {
 	buffer [][]Cell
 }
 
-func NewRenderer(width, height int) *Renderer {
+func NewRenderer() *Renderer {
 	fmt.Print(alternateScreen)
 	fmt.Print(hideCursor)
+
+	width, height := getTerminalSize()
 
 	buffer := make([][]Cell, height)
 	for i := range height {
@@ -72,4 +77,23 @@ func (r *Renderer) Refresh(g *Game) {
 			}
 		}
 	}
+}
+
+func getTerminalSize() (width, height int) {
+	fd := int(os.Stdin.Fd())
+
+	// Check if the file descriptor is actually a terminal.
+	if !term.IsTerminal(fd) {
+		panic("Not running in a terminal.")
+	}
+
+	width, height, err := term.GetSize(fd)
+	if err != nil {
+		panic(fmt.Errorf("Error getting terminal size: %v", err))
+	}
+	return width / 2, height - 1
+}
+
+func (r *Renderer) GetGameSize() (width, height int) {
+	return r.width, r.height
 }

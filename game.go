@@ -32,6 +32,7 @@ type Game struct {
 	IsRunning     bool
 	Closing       bool
 	playersMutex  sync.Mutex
+	renderer      *Renderer
 }
 
 type PlayerService interface {
@@ -77,12 +78,14 @@ var PlayerColors = []string{
 	ColorWhite,
 }
 
-func NewGame(width, height int) *Game {
+func NewGame(renderer *Renderer) *Game {
+	width, height := renderer.GetGameSize()
 	g := &Game{
-		World:   NewWorld(width, height),
-		Height:  height,
-		Width:   width,
-		Players: map[uuid.UUID]*Player{},
+		World:    NewWorld(width, height),
+		Height:   height,
+		Width:    width,
+		Players:  map[uuid.UUID]*Player{},
+		renderer: renderer,
 	}
 	return g
 }
@@ -96,9 +99,6 @@ func NewWorld(width int, height int) [][]Cell {
 }
 
 func (g *Game) Run() {
-	r := NewRenderer(g.Width, g.Height)
-	defer r.Close()
-
 	ticker := time.NewTicker(FrameDuration)
 
 	for !g.Closing {
@@ -107,7 +107,7 @@ func (g *Game) Run() {
 			g.updatePositions()
 			g.updateCells()
 		}
-		r.Refresh(g)
+		g.renderer.Refresh(g)
 	}
 }
 
