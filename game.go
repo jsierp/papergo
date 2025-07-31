@@ -22,14 +22,16 @@ type Player struct {
 	Direction Direction
 	Id        PlayerId
 	Color     string
+	Game      *Game
 }
 
 type Game struct {
-	World        [][]Cell
-	Players      map[uuid.UUID]*Player
-	IsRunning    bool
-	Closing      bool
-	playersMutex sync.Mutex
+	World         [][]Cell
+	Height, Width int
+	Players       map[uuid.UUID]*Player
+	IsRunning     bool
+	Closing       bool
+	playersMutex  sync.Mutex
 }
 
 type PlayerService interface {
@@ -46,8 +48,6 @@ type Cell struct {
 	TracePlayerId PlayerId
 }
 
-const Rows = 60
-const Cols = 100
 const FPS = 100
 const FrameDuration = time.Second / FPS
 const Speed = 10.
@@ -77,24 +77,26 @@ var PlayerColors = []string{
 	ColorWhite,
 }
 
-func NewGame() *Game {
+func NewGame(width, height int) *Game {
 	g := &Game{
-		World:   NewWorld(Rows, Cols),
+		World:   NewWorld(width, height),
+		Height:  height,
+		Width:   width,
 		Players: map[uuid.UUID]*Player{},
 	}
 	return g
 }
 
-func NewWorld(rows int, cols int) [][]Cell {
-	world := make([][]Cell, rows)
-	for i := range rows {
-		world[i] = make([]Cell, cols)
+func NewWorld(width int, height int) [][]Cell {
+	world := make([][]Cell, height)
+	for i := range height {
+		world[i] = make([]Cell, width)
 	}
 	return world
 }
 
 func (g *Game) Run() {
-	r := NewRenderer(Rows, Cols)
+	r := NewRenderer(g.Width, g.Height)
 	defer r.Close()
 
 	ticker := time.NewTicker(FrameDuration)
@@ -119,9 +121,9 @@ func (p *Player) updatePosition() {
 	case Up:
 		p.Y = max(0, p.Y-FrameDelta)
 	case Down:
-		p.Y = min(Rows-eps, p.Y+FrameDelta)
+		p.Y = min(float64(p.Game.Height)-eps, p.Y+FrameDelta)
 	case Right:
-		p.X = min(Cols-eps, p.X+FrameDelta)
+		p.X = min(float64(p.Game.Width)-eps, p.X+FrameDelta)
 	case Left:
 		p.X = max(0, p.X-FrameDelta)
 	}
@@ -157,8 +159,8 @@ func (g *Game) Join(uid uuid.UUID) {
 
 	p := &Player{
 		Id:        g.getMinAvailablePlayerId(),
-		X:         float64(rand.Intn(Cols)),
-		Y:         float64(rand.Intn(Rows)),
+		X:         float64(rand.Intn(g.Width)),
+		Y:         float64(rand.Intn(g.Height)),
 		Direction: Right,
 	}
 
