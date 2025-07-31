@@ -82,16 +82,16 @@ func (r *Renderer) Refresh(g *Game) {
 func getTerminalSize() (width, height int) {
 	fd := int(os.Stdin.Fd())
 
-	// Check if the file descriptor is actually a terminal.
 	if !term.IsTerminal(fd) {
 		panic("Not running in a terminal.")
 	}
 
-	width, height, err := term.GetSize(fd)
+	cols, rows, err := term.GetSize(fd)
 	if err != nil {
 		panic(fmt.Errorf("Error getting terminal size: %v", err))
 	}
-	return width / 2, height - 1
+	width, height = cols/2, rows
+	return
 }
 
 func (r *Renderer) GetGameSize() (width, height int) {
