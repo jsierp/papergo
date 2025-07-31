@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
+type PlayerId uint8
+
 type Player struct {
 	X         float64
 	Y         float64
@@ -18,7 +20,7 @@ type Player struct {
 	MaxC      int
 	MaxR      int
 	Direction Direction
-	Id        uuid.UUID
+	Id        PlayerId
 	Color     string
 }
 
@@ -39,18 +41,10 @@ type PlayerService interface {
 	TurnRight(uuid.UUID)
 }
 
-type CellType uint8
-
 type Cell struct {
-	PlayerId uuid.UUID
-	Type     CellType
+	TakenPlayerId PlayerId
+	TracePlayerId PlayerId
 }
-
-const (
-	CellTypeEmpty CellType = iota
-	CellTypeTrace
-	CellTypeTaken
-)
 
 const Rows = 60
 const Cols = 100
@@ -58,7 +52,6 @@ const FPS = 100
 const FrameDuration = time.Second / FPS
 const Speed = 10.
 const eps = 1e-6
-
 const FrameDelta = 1. / FPS * Speed
 
 type Direction int
@@ -154,46 +147,38 @@ func (g *Game) TurnRight(p uuid.UUID) {
 	player.Direction = (player.Direction + 1) % 4
 }
 
-func (g *Game) Join(pId uuid.UUID) {
+func (g *Game) Join(uid uuid.UUID) {
 	g.playersMutex.Lock()
 	defer g.playersMutex.Unlock()
 
-	if _, ok := g.Players[pId]; ok {
+	if _, ok := g.Players[uid]; ok {
 		return
 	}
 
 	p := &Player{
-		Id:        pId,
+		Id:        g.getMinAvailablePlayerId(),
 		X:         float64(rand.Intn(Cols)),
 		Y:         float64(rand.Intn(Rows)),
 		Direction: Right,
-		Color:     g.getNextAvailablePlayerColor(),
 	}
 
 	p.MinR, p.MaxR = int(p.Y), int(p.Y)
 	p.MinC, p.MaxC = int(p.X), int(p.X)
-	g.World[int(p.Y)][int(p.X)].Type = CellTypeTaken
-	g.World[int(p.Y)][int(p.X)].PlayerId = p.Id
-
-	g.Players[p.Id] = p
+	g.World[int(p.Y)][int(p.X)].TakenPlayerId = p.Id
+	g.Players[uid] = p
 }
 
-func (g *Game) getNextAvailablePlayerColor() string {
-	for _, color := range PlayerColors {
-		if !g.isColorUsed(color) {
-			return color
-		}
-	}
-	return ColorWhite
-}
-
-func (g *Game) isColorUsed(color string) bool {
+func (g *Game) getMinAvailablePlayerId() PlayerId {
+	pIds := make(map[PlayerId]struct{})
 	for _, p := range g.Players {
-		if p.Color == color {
-			return true
+		pIds[p.Id] = struct{}{}
+	}
+	for i := PlayerId(1); i <= PlayerId(len(g.Players)); i++ {
+		if _, found := pIds[i]; !found {
+			return i
 		}
 	}
-	return false
+	return PlayerId(len(g.Players)) + 1
 }
 
 func (g *Game) ToggleIsRunning() {
@@ -208,23 +193,19 @@ func (g *Game) updateCells() {
 
 func (g *Game) updatePlayerCells(p *Player) {
 	p.updatePlayerBoundary()
+	cell := &g.World[int(p.Y)][int(p.X)]
 
-	switch g.World[int(p.Y)][int(p.X)].Type {
-	case CellTypeEmpty:
-		g.World[int(p.Y)][int(p.X)].Type = CellTypeTrace
-		g.World[int(p.Y)][int(p.X)].PlayerId = p.Id
-		if !p.Trace {
-			p.Trace = true
-		}
-	case CellTypeTaken:
-		if p.Trace && g.World[int(p.Y)][int(p.X)].PlayerId == p.Id {
+	if cell.TracePlayerId != 0 && cell.TracePlayerId != p.Id {
+		g.killPlayer(cell.TracePlayerId)
+	}
+	if cell.TakenPlayerId == p.Id {
+		if p.Trace {
 			g.fillTrace(p)
 			p.Trace = false
 		}
-	case CellTypeTrace:
-		if pId := g.World[int(p.Y)][int(p.X)].PlayerId; pId != p.Id {
-			g.killPlayer(pId)
-		}
+	} else {
+		cell.TracePlayerId = p.Id
+		p.Trace = true
 	}
 }
 
@@ -240,7 +221,10 @@ func (g *Game) fillTrace(p *Player) {
 	for i := range takenMask {
 		for j := range takenMask[i] {
 			if takenMask[i][j] {
-				g.World[p.MinR+i][p.MinC+j] = Cell{Type: CellTypeTaken, PlayerId: p.Id}
+				g.World[p.MinR+i][p.MinC+j].TakenPlayerId = p.Id
+			}
+			if g.World[p.MinR+i][p.MinC+j].TracePlayerId == p.Id {
+				g.World[p.MinR+i][p.MinC+j].TracePlayerId = 0
 			}
 		}
 	}
@@ -282,27 +266,30 @@ func (g *Game) getTakenMask(p *Player) [][]bool {
 }
 
 func considerPoint(q *[]Point, point Point, g *Game, p *Player, mask [][]bool) {
-	c := g.World[p.MinR+point.R][p.MinC+point.C]
-	if (c.Type == CellTypeEmpty || c.PlayerId != p.Id) && mask[point.R][point.C] {
+	cell := g.World[p.MinR+point.R][p.MinC+point.C]
+	if cell.TakenPlayerId != p.Id && cell.TracePlayerId != p.Id && mask[point.R][point.C] {
 		*q = append(*q, Point{point.R, point.C})
 		mask[point.R][point.C] = false
 	}
 }
 
-func (g *Game) killPlayer(pId uuid.UUID) {
-	p, ok := g.Players[pId]
-	if !ok {
-		return
+func (g *Game) killPlayer(pId PlayerId) {
+	for uid, p := range g.Players {
+		if p.Id == pId {
+			delete(g.Players, uid)
+			break
+		}
 	}
 
 	for i := range g.World {
 		for j := range g.World[i] {
-			if g.World[i][j].PlayerId == p.Id {
-				g.World[i][j].Type = CellTypeEmpty
-				g.World[i][j].PlayerId = uuid.Nil
+			if g.World[i][j].TracePlayerId == pId {
+				g.World[i][j].TracePlayerId = 0
+			}
+			if g.World[i][j].TakenPlayerId == pId {
+				g.World[i][j].TakenPlayerId = 0
 			}
 		}
 	}
 
-	delete(g.Players, pId)
 }
