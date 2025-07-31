@@ -22,7 +22,6 @@ type Player struct {
 	Direction Direction
 	Id        PlayerId
 	Color     string
-	Game      *Game
 }
 
 type Game struct {
@@ -113,17 +112,17 @@ func (g *Game) Run() {
 
 func (g *Game) updatePositions() {
 	for _, p := range g.Players {
-		p.updatePosition()
+		g.updatePlayerPosition(p)
 	}
 }
-func (p *Player) updatePosition() {
+func (g *Game) updatePlayerPosition(p *Player) {
 	switch p.Direction {
 	case Up:
 		p.Y = max(0, p.Y-FrameDelta)
 	case Down:
-		p.Y = min(float64(p.Game.Height)-eps, p.Y+FrameDelta)
+		p.Y = min(float64(g.Height)-eps, p.Y+FrameDelta)
 	case Right:
-		p.X = min(float64(p.Game.Width)-eps, p.X+FrameDelta)
+		p.X = min(float64(g.Width)-eps, p.X+FrameDelta)
 	case Left:
 		p.X = max(0, p.X-FrameDelta)
 	}
@@ -162,7 +161,6 @@ func (g *Game) Join(uid uuid.UUID) {
 		X:         float64(rand.Intn(g.Width)),
 		Y:         float64(rand.Intn(g.Height)),
 		Direction: Right,
-		Game:      g,
 	}
 
 	p.MinR, p.MaxR = int(p.Y), int(p.Y)
