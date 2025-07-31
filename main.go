@@ -1,7 +1,10 @@
 package main
 
 func main() {
-	game := NewGame()
+	renderer := NewRenderer()
+	defer renderer.Close()
+
+	game := NewGame(renderer)
 
 	keyboard := NewKeyboardInputHandler(game)
 	go keyboard.Listen()
