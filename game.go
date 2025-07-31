@@ -162,6 +162,7 @@ func (g *Game) Join(uid uuid.UUID) {
 		X:         float64(rand.Intn(g.Width)),
 		Y:         float64(rand.Intn(g.Height)),
 		Direction: Right,
+		Game:      g,
 	}
 
 	p.MinR, p.MaxR = int(p.Y), int(p.Y)
