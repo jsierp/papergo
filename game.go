@@ -48,8 +48,6 @@ type Cell struct {
 }
 
 const (
-	Rows          = 60
-	Cols          = 100
 	FPS           = 100
 	FrameDuration = time.Second / FPS
 	Speed         = 10.
