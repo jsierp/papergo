@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+
+	"golang.org/x/term"
 )
 
 const (
@@ -27,21 +30,23 @@ const (
 )
 
 type Renderer struct {
-	rows   int
-	cols   int
+	width  int
+	height int
 	buffer [][]Cell
 }
 
-func NewRenderer(rows, cols int) *Renderer {
+func NewRenderer() *Renderer {
 	fmt.Print(alternateScreen)
 	fmt.Print(hideCursor)
 
-	buffer := make([][]Cell, rows)
-	for i := range rows {
-		buffer[i] = make([]Cell, cols)
+	width, height := getTerminalSize()
+
+	buffer := make([][]Cell, height)
+	for i := range height {
+		buffer[i] = make([]Cell, width)
 	}
 
-	return &Renderer{rows, cols, buffer}
+	return &Renderer{width, height, buffer}
 }
 
 func (r *Renderer) Close() {
@@ -57,8 +62,8 @@ func (r *Renderer) render(row int, col int, char string, color string) {
 func (r *Renderer) Refresh(g *Game) {
 	frame := g.World
 
-	for y := range r.rows {
-		for x := range r.cols {
+	for y := range r.height {
+		for x := range r.width {
 			if r.buffer[y][x] != frame[y][x] {
 				r.buffer[y][x] = frame[y][x]
 
@@ -72,4 +77,23 @@ func (r *Renderer) Refresh(g *Game) {
 			}
 		}
 	}
+}
+
+func getTerminalSize() (width, height int) {
+	fd := int(os.Stdin.Fd())
+
+	if !term.IsTerminal(fd) {
+		panic("Not running in a terminal.")
+	}
+
+	cols, rows, err := term.GetSize(fd)
+	if err != nil {
+		panic(fmt.Errorf("Error getting terminal size: %v", err))
+	}
+	width, height = cols/2, rows
+	return
+}
+
+func (r *Renderer) GetGameSize() (width, height int) {
+	return r.width, r.height
 }
