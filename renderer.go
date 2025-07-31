@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+
+	"golang.org/x/term"
 )
 
 const (
@@ -22,9 +25,9 @@ const (
 	showCursor      = "\033[?25h" // Shows the cursor
 	alternateScreen = "\033[?1049h"
 	mainScreen      = "\033[?1049l"
-	Solid           = "██"
+	Solid           = "▓▓"
 	Striped         = "░░"
-	Head            = "🟔 "
+	Head            = "██"
 )
 
 var PlayerColors = []string{
@@ -38,21 +41,23 @@ var PlayerColors = []string{
 }
 
 type Renderer struct {
-	rows   int
-	cols   int
+	width  int
+	height int
 	buffer [][]Cell
 }
 
-func NewRenderer(rows, cols int) *Renderer {
+func NewRenderer() *Renderer {
 	fmt.Print(alternateScreen)
 	fmt.Print(hideCursor)
 
-	buffer := make([][]Cell, rows)
-	for i := range rows {
-		buffer[i] = make([]Cell, cols)
+	width, height := getTerminalSize()
+
+	buffer := make([][]Cell, height)
+	for i := range height {
+		buffer[i] = make([]Cell, width)
 	}
 
-	return &Renderer{rows, cols, buffer}
+	return &Renderer{width, height, buffer}
 }
 
 func (r *Renderer) Close() {
@@ -68,18 +73,19 @@ func (r *Renderer) render(row int, col int, char string, color string) {
 func (r *Renderer) Refresh(g *Game) {
 	frame := g.World
 
-	for y := range r.rows {
-		for x := range r.cols {
-			if r.buffer[y][x] != frame[y][x] {
-				r.buffer[y][x] = frame[y][x]
+	for y := range r.height {
+		for x := range r.width {
+			if r.buffer[y][x] == frame[y][x] {
+				continue
+			}
+			r.buffer[y][x] = frame[y][x]
 
-				if frame[y][x].TracePlayerId != 0 {
-					r.render(y, x, Striped, PlayerColors[frame[y][x].TracePlayerId-1])
-				} else if frame[y][x].TakenPlayerId != 0 {
-					r.render(y, x, Solid, PlayerColors[frame[y][x].TakenPlayerId-1])
-				} else {
-					r.render(y, x, "  ", colorReset)
-				}
+			if frame[y][x].TracePlayerId != 0 {
+				r.render(y, x, Striped, PlayerColors[frame[y][x].TracePlayerId-1])
+			} else if frame[y][x].TakenPlayerId != 0 {
+				r.render(y, x, Solid, PlayerColors[frame[y][x].TakenPlayerId-1])
+			} else {
+				r.render(y, x, "  ", colorReset)
 			}
 		}
 	}
@@ -88,4 +94,23 @@ func (r *Renderer) Refresh(g *Game) {
 		r.render(int(p.Y), int(p.X), Head, PlayerColors[p.Id-1])
 		r.buffer[int(p.Y)][int(p.X)] = Cell{}
 	}
+}
+
+func getTerminalSize() (width, height int) {
+	fd := int(os.Stdin.Fd())
+
+	if !term.IsTerminal(fd) {
+		panic("Not running in a terminal.")
+	}
+
+	cols, rows, err := term.GetSize(fd)
+	if err != nil {
+		panic(fmt.Errorf("Error getting terminal size: %v", err))
+	}
+	width, height = cols/2, rows
+	return
+}
+
+func (r *Renderer) GetGameSize() (width, height int) {
+	return r.width, r.height
 }

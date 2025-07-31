@@ -24,11 +24,13 @@ type Player struct {
 }
 
 type Game struct {
-	World        [][]Cell
-	Players      map[uuid.UUID]*Player
-	IsRunning    bool
-	Closing      bool
-	playersMutex sync.Mutex
+	World         [][]Cell
+	Height, Width int
+	Players       map[uuid.UUID]*Player
+	IsRunning     bool
+	Closing       bool
+	playersMutex  sync.Mutex
+	renderer      *Renderer
 }
 
 type PlayerService interface {
@@ -68,26 +70,27 @@ const (
 	Left
 )
 
-func NewGame() *Game {
+func NewGame(renderer *Renderer) *Game {
+	width, height := renderer.GetGameSize()
 	g := &Game{
-		World:   NewWorld(Rows, Cols),
-		Players: map[uuid.UUID]*Player{},
+		World:    NewWorld(width, height),
+		Height:   height,
+		Width:    width,
+		Players:  map[uuid.UUID]*Player{},
+		renderer: renderer,
 	}
 	return g
 }
 
-func NewWorld(rows int, cols int) [][]Cell {
-	world := make([][]Cell, rows)
-	for i := range rows {
-		world[i] = make([]Cell, cols)
+func NewWorld(width int, height int) [][]Cell {
+	world := make([][]Cell, height)
+	for i := range height {
+		world[i] = make([]Cell, width)
 	}
 	return world
 }
 
 func (g *Game) Run() {
-	r := NewRenderer(Rows, Cols)
-	defer r.Close()
-
 	ticker := time.NewTicker(FrameDuration)
 
 	for !g.Closing {
@@ -96,24 +99,24 @@ func (g *Game) Run() {
 			g.updatePositions()
 			g.updateCells()
 		}
-		r.Refresh(g)
+		g.renderer.Refresh(g)
 	}
 }
 
 func (g *Game) updatePositions() {
 	for _, p := range g.Players {
-		p.updatePosition()
+		g.updatePlayerPosition(p)
 	}
 }
 
-func (p *Player) updatePosition() {
+func (g *Game) updatePlayerPosition(p *Player) {
 	switch p.Direction {
 	case Up:
 		p.Y = max(0, p.Y-FrameDelta)
 	case Down:
-		p.Y = min(Rows-eps, p.Y+FrameDelta)
+		p.Y = min(float64(g.Height)-eps, p.Y+FrameDelta)
 	case Right:
-		p.X = min(Cols-eps, p.X+FrameDelta)
+		p.X = min(float64(g.Width)-eps, p.X+FrameDelta)
 	case Left:
 		p.X = max(0, p.X-FrameDelta)
 	}
@@ -149,8 +152,8 @@ func (g *Game) Join(uid uuid.UUID) {
 
 	p := &Player{
 		Id:        g.getMinAvailablePlayerId(),
-		X:         float64(rand.Intn(Cols)),
-		Y:         float64(rand.Intn(Rows)),
+		X:         float64(rand.Intn(g.Width)),
+		Y:         float64(rand.Intn(g.Height)),
 		Direction: Right,
 	}
 
