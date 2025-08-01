@@ -155,11 +155,45 @@ func (g *Game) Join(uid uuid.UUID) {
 		Direction: Right,
 	}
 
-	p.MinR, p.MaxR = int(p.Y), int(p.Y)
-	p.MinC, p.MaxC = int(p.X), int(p.X)
-	g.World[int(p.Y)][int(p.X)].TakenPlayerId = p.Id
+	g.claimStartingArea(p)
 	g.Players[uid] = p
 }
+
+func (g *Game) claimStartingArea(p *Player) {
+	centerRow := int(p.Y)
+	centerCol := int(p.X)
+
+	p.MinR = centerRow
+	p.MaxR = centerRow
+	p.MinC = centerCol
+	p.MaxC = centerCol
+
+	for rowOffset := -1; rowOffset <= 1; rowOffset++ {
+		for colOffset := -1; colOffset <= 1; colOffset++ {
+			currentRow := centerRow + rowOffset
+			currentCol := centerCol + colOffset
+
+			if currentRow >= 0 && currentRow < g.Height &&
+				currentCol >= 0 && currentCol < g.Width {
+				g.World[currentRow][currentCol].TakenPlayerId = p.Id
+
+				if currentRow < p.MinR {
+					p.MinR = currentRow
+				}
+				if currentRow > p.MaxR {
+					p.MaxR = currentRow
+				}
+				if currentCol < p.MinC {
+					p.MinC = currentCol
+				}
+				if currentCol > p.MaxC {
+					p.MaxC = currentCol
+				}
+			}
+		}
+	}
+}
+
 
 func (g *Game) getMinAvailablePlayerId() PlayerId {
 	pIds := make(map[PlayerId]struct{})
