@@ -1,6 +1,6 @@
 # papergo
 
-A terminal-based game written in Go, inspired by the classic paper-and-pencil style.  
+A terminal-based game written in Go, inspired by the classic paper.io game.  
 Multiplayer support and simple CLI interface. Open source and open to contributions.
 
 ## 🔧 How to run
@@ -8,7 +8,7 @@ Multiplayer support and simple CLI interface. Open source and open to contributi
 1. Clone the repo:
 
    ```bash
-   git clone https://github.com/yourname/papergo.git
+   git clone https://github.com/jsierp/papergo.git
    cd papergo
    ```
 
