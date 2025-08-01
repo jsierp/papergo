@@ -155,10 +155,21 @@ func (g *Game) Join(uid uuid.UUID) {
 		Direction: Right,
 	}
 
-	p.MinR, p.MaxR = int(p.Y), int(p.Y)
-	p.MinC, p.MaxC = int(p.X), int(p.X)
-	g.World[int(p.Y)][int(p.X)].TakenPlayerId = p.Id
+	g.claimStartingArea(p)
 	g.Players[uid] = p
+}
+
+func (g *Game) claimStartingArea(p *Player) {
+	p.MinR = max(0, int(p.Y)-1)
+	p.MaxR = min(int(p.Y)+1, g.Height-1)
+	p.MinC = max(0, int(p.X)-1)
+	p.MaxC = min(int(p.X)+1, g.Width-1)
+
+	for row := p.MinR; row <= p.MaxR; row++ {
+		for col := p.MinC; col <= p.MaxC; col++ {
+			g.World[row][col].TakenPlayerId = p.Id
+		}
+	}
 }
 
 func (g *Game) getMinAvailablePlayerId() PlayerId {
