@@ -105,8 +105,10 @@ func NewRenderer() *Renderer {
 
 	gameCols, gameRows := width/2, height
 
+	var scoreboard bool
 	if width > height && width > 100 {
 		gameCols -= scoreboardWidth
+		scoreboard = true
 	} else {
 		log.Println("Terminal too small for scoreboard, hiding it.")
 	}
@@ -116,6 +118,7 @@ func NewRenderer() *Renderer {
 		gameRows:       gameRows,
 		terminalWidth:  width,
 		terminalHeight: height,
+		scorebaord:     scoreboard,
 	}
 	r.buffer = r.newBuffer()
 	return &r
@@ -143,16 +146,19 @@ func (r *Renderer) Refresh(g *Game) {
 	buffer := r.newBuffer()
 	r.bufferGame(g, buffer)
 	r.bufferHeads(g, buffer)
-	r.bufferScoreboard(g, buffer)
+	if r.scorebaord {
+		r.bufferScoreboard(g, buffer)
+	}
 
 	for y := 0; y < r.terminalHeight; y++ {
 		for x := 0; x < r.terminalWidth; x++ {
-			if buffer[y][x] != r.buffer[y][x] {
-				if buffer[y][x].char == 0 {
-					r.render(y, x, " ", colorReset)
-				} else {
-					r.render(y, x, string(buffer[y][x].char), PlayerColors[buffer[y][x].colorID])
-				}
+			if buffer[y][x] == r.buffer[y][x] {
+				continue
+			}
+			if buffer[y][x].char == 0 {
+				r.render(y, x, " ", colorReset)
+			} else {
+				r.render(y, x, string(buffer[y][x].char), PlayerColors[buffer[y][x].colorID])
 			}
 		}
 	}
