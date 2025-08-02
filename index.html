@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Full Screen Buttons</title>
     <style>
 	html, body {
@@ -21,10 +21,10 @@
 		width: 100%; /* Each button takes an equal share of the available space */
 		height: 100%;
 		border: none; /* Removes default button border */
-		font-size: 2em; /* Adjust font size as needed */
+		font-size: 64px; /* Adjust font size as needed */
 		color: white; /* Text color */
 		cursor: pointer; /* Indicates it's clickable */
-		transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+		touch-action: manipulation;
 	}
 
 	.button:first-child {
@@ -34,25 +34,34 @@
 	.button:last-child {
 		background-color: #008CBA; /* Blue for the second button */
 	}
-
-	.button:hover {
-		opacity: 0.9; /* Slightly dim on hover */
-	}
-	form {
-		flex: 1
-	}
 	</style>
 </head>
 <body>
     <div class="container">
-	<button onclick="sendAction('left')" class="button">Left</button>
-	<button onclick="sendAction('right')" class="button">Right</button>
+	<button onclick="sendAction('l')" class="button">Left</button>
+	<button onclick="sendAction('r')" class="button">Right</button>
     </div>
     <script>
 	const ws = new WebSocket("/ws")
+	const wsMsgIntervalMs = 100;
+	let intervalId
+	let isOpen = false;
 	function sendAction(action) {
-		ws.send(action)
+		if(isOpen) {
+			ws.send(action)
+		}
 	}
+	ws.addEventListener("open", (event) => {
+		intervalId = setInterval(() => {
+			ws.send("_")
+		}, wsMsgIntervalMs)
+		isOpen = true;
+	});
+
+	ws.addEventListener("close", (event) => {
+		clearInterval(intervalId)
+	})
+
     </script>
 </body>
 </html>

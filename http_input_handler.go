@@ -65,20 +65,18 @@ func (h *HttpInputHandler) serveWebsocket(w http.ResponseWriter, req *http.Reque
 	h.playerService.Join(playerId)
 
 	for {
-		// Read a message from the client
-		_, message, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("Error reading message:", err)
 			break
 		}
 
-		switch string(message) {
-		case "left":
+		switch string(msg) {
+		case "l":
 			h.playerService.TurnLeft(playerId)
-		case "right":
+		case "r":
 			h.playerService.TurnRight(playerId)
 		}
-		conn.WriteMessage(websocket.TextMessage, []byte("response"))
 	}
 }
 
