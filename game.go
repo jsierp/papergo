@@ -277,6 +277,17 @@ func considerPoint(q *[]Point, point Point, g *Game, p *Player, mask [][]bool) {
 	}
 }
 
+func (g *Game) getScoreboard() []*Player {
+	scoreboard := make([]*Player, 0, len(g.Players))
+	for _, p := range g.Players {
+		scoreboard = append(scoreboard, p)
+	}
+	slices.SortFunc(scoreboard, func(a, b *Player) int {
+		return int(a.Id) - int(b.Id)
+	})
+	return scoreboard
+}
+
 func (g *Game) killPlayer(pId PlayerId) {
 	for uid, p := range g.Players {
 		if p.Id == pId {
