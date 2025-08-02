@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"golang.org/x/term"
@@ -10,13 +11,23 @@ import (
 const (
 	cursorTo = "\033[%d;%dH"
 
-	ColorRed     = "\033[31m"
-	ColorGreen   = "\033[32m"
-	ColorYellow  = "\033[33m"
-	ColorBlue    = "\033[34m"
-	ColorMagenta = "\033[35m"
-	ColorCyan    = "\033[36m"
-	ColorWhite   = "\033[37m"
+	Black   = "\033[30m"
+	Red     = "\033[31m"
+	Green   = "\033[32m"
+	Yellow  = "\033[33m"
+	Blue    = "\033[34m"
+	Magenta = "\033[35m"
+	Cyan    = "\033[36m"
+	White   = "\033[37m"
+
+	BrightBlack   = "\033[90m"
+	BrightRed     = "\033[91m"
+	BrightGreen   = "\033[92m"
+	BrightYellow  = "\033[93m"
+	BrightBlue    = "\033[94m"
+	BrightMagenta = "\033[95m"
+	BrightCyan    = "\033[96m"
+	BrightWhite   = "\033[97m"
 
 	colorReset      = "\033[0m"
 	clearScreen     = "\033[2J"   // Clears the entire screen
@@ -25,25 +36,65 @@ const (
 	showCursor      = "\033[?25h" // Shows the cursor
 	alternateScreen = "\033[?1049h"
 	mainScreen      = "\033[?1049l"
-	Solid           = "▓▓"
-	Striped         = "░░"
-	Head            = "██"
+	Solid           = '▓'
+	Striped         = '░'
+	Head            = '█'
 )
 
-var PlayerColors = []string{
-	ColorBlue,
-	ColorRed,
-	ColorGreen,
-	ColorYellow,
-	ColorMagenta,
-	ColorCyan,
-	ColorWhite,
+type colorID uint8
+
+var PlayerColors = [...]string{
+	Black,
+	Red,
+	Green,
+	Yellow,
+	Blue,
+	Magenta,
+	Cyan,
+	White,
+	BrightRed,
+	BrightGreen,
+	BrightYellow,
+	BrightBlue,
+	BrightMagenta,
+	BrightCyan,
+	BrightWhite,
+	BrightBlack,
+}
+
+var PlayerNames = [...]string{
+	"Blakko", // Black
+	"Reddy",  // Red
+	"Greeno", // Green
+	"Yelloz", // Yellow
+	"Bluppo", // Blue
+	"Maggo",  // Magenta
+	"Cynic",  // Cyan
+	"Whizzo", // White
+	"Zedred", // BrightRed
+	"Grinko", // BrightGreen
+	"Yellix", // BrightYellow
+	"Bluzo",  // BrightBlue
+	"Magito", // BrightMagenta
+	"Cyzzy",  // BrightCyan
+	"Whitzo", // BrightWhite
+	"Shadok", // BrightBlack
+}
+
+const scoreboardWidth = 15
+
+type character struct {
+	char    rune
+	colorID colorID
 }
 
 type Renderer struct {
-	width  int
-	height int
-	buffer [][]Cell
+	gameCols       int
+	gameRows       int
+	buffer         [][]character
+	terminalWidth  int
+	terminalHeight int
+	scorebaord     bool
 }
 
 func NewRenderer() *Renderer {
@@ -52,12 +103,22 @@ func NewRenderer() *Renderer {
 
 	width, height := getTerminalSize()
 
-	buffer := make([][]Cell, height)
-	for i := range height {
-		buffer[i] = make([]Cell, width)
+	gameCols, gameRows := width/2, height
+
+	if width > height && width > 100 {
+		gameCols -= scoreboardWidth
+	} else {
+		log.Println("Terminal too small for scoreboard, hiding it.")
 	}
 
-	return &Renderer{width, height, buffer}
+	r := Renderer{
+		gameCols:       gameCols,
+		gameRows:       gameRows,
+		terminalWidth:  width,
+		terminalHeight: height,
+	}
+	r.buffer = r.newBuffer()
+	return &r
 }
 
 func (r *Renderer) Close() {
@@ -66,33 +127,93 @@ func (r *Renderer) Close() {
 }
 
 func (r *Renderer) render(row int, col int, char string, color string) {
-	fmt.Printf(cursorTo, row+1, col*2+1)
+	fmt.Printf(cursorTo, row, col)
 	fmt.Printf("%s%s", color, char)
 }
 
+func (r *Renderer) newBuffer() [][]character {
+	buffer := make([][]character, r.terminalHeight)
+	for i := range r.terminalHeight {
+		buffer[i] = make([]character, r.terminalWidth)
+	}
+	return buffer
+}
+
 func (r *Renderer) Refresh(g *Game) {
-	frame := g.World
+	buffer := r.newBuffer()
+	r.bufferGame(g, buffer)
+	r.bufferHeads(g, buffer)
+	r.bufferScoreboard(g, buffer)
 
-	for y := range r.height {
-		for x := range r.width {
-			if r.buffer[y][x] == frame[y][x] {
-				continue
-			}
-			r.buffer[y][x] = frame[y][x]
-
-			if frame[y][x].TracePlayerId != 0 {
-				r.render(y, x, Striped, PlayerColors[frame[y][x].TracePlayerId-1])
-			} else if frame[y][x].TakenPlayerId != 0 {
-				r.render(y, x, Solid, PlayerColors[frame[y][x].TakenPlayerId-1])
-			} else {
-				r.render(y, x, "  ", colorReset)
+	for y := 0; y < r.terminalHeight; y++ {
+		for x := 0; x < r.terminalWidth; x++ {
+			if buffer[y][x] != r.buffer[y][x] {
+				if buffer[y][x].char == 0 {
+					r.render(y, x, " ", colorReset)
+				} else {
+					r.render(y, x, string(buffer[y][x].char), PlayerColors[buffer[y][x].colorID])
+				}
 			}
 		}
 	}
+	r.buffer = buffer
+}
 
+func (r *Renderer) bufferScoreboard(g *Game, b [][]character) {
+	scoreboard := g.getScoreboard()
+
+	for j, char := range "SCOREBOARD" {
+		if j < scoreboardWidth-1 {
+			b[1][r.gameCols*2+2+j] = character{char: char, colorID: 7}
+		}
+	}
+
+	for i, p := range scoreboard {
+		log.Println(p.Id)
+		name := PlayerNames[p.Id]
+		scoreText := fmt.Sprintf("%s: %d", name, 100)
+		for j, char := range scoreText {
+			if j < scoreboardWidth-1 {
+				b[i*2+3][r.gameCols*2+2+j] = character{char: char, colorID: colorID(p.Id)}
+			}
+		}
+	}
+}
+
+func (r *Renderer) bufferGame(g *Game, b [][]character) {
+	for y := 0; y < r.gameRows; y++ {
+		for x := 0; x < r.gameCols; x++ {
+			var c character
+			if g.World[y][x].TracePlayerId != 0 {
+				c = character{
+					char:    Striped,
+					colorID: colorID(g.World[y][x].TracePlayerId),
+				}
+			} else if g.World[y][x].TakenPlayerId != 0 {
+				c = character{
+					char:    Solid,
+					colorID: colorID(g.World[y][x].TakenPlayerId),
+				}
+			} else {
+				c = character{
+					char:    ' ',
+					colorID: 0,
+				}
+			}
+			b[y][x*2] = c
+			b[y][x*2+1] = c
+		}
+	}
+}
+
+func (r *Renderer) bufferHeads(g *Game, b [][]character) {
 	for _, p := range g.Players {
-		r.render(int(p.Y), int(p.X), Head, PlayerColors[p.Id-1])
-		r.buffer[int(p.Y)][int(p.X)] = Cell{}
+		c := character{
+			char:    Head,
+			colorID: colorID(p.Id),
+		}
+		b[int(p.Y)][int(p.X)*2] = c
+		b[int(p.Y)][int(p.X)*2+1] = c
 	}
 }
 
@@ -103,14 +224,13 @@ func getTerminalSize() (width, height int) {
 		panic("Not running in a terminal.")
 	}
 
-	cols, rows, err := term.GetSize(fd)
+	width, height, err := term.GetSize(fd)
 	if err != nil {
 		panic(fmt.Errorf("Error getting terminal size: %v", err))
 	}
-	width, height = cols/2, rows
 	return
 }
 
 func (r *Renderer) GetGameSize() (width, height int) {
-	return r.width, r.height
+	return r.gameCols, r.gameRows
 }
