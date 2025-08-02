@@ -16,7 +16,7 @@ var frontend []byte
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all connections
+		return true
 	},
 }
 
