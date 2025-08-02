@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"golang.org/x/term"
@@ -109,8 +108,6 @@ func NewRenderer() *Renderer {
 	if width > height && width > 100 {
 		gameCols -= scoreboardWidth
 		scoreboard = true
-	} else {
-		log.Println("Terminal too small for scoreboard, hiding it.")
 	}
 
 	r := Renderer{
@@ -175,7 +172,6 @@ func (r *Renderer) bufferScoreboard(g *Game, b [][]character) {
 	}
 
 	for i, p := range scoreboard {
-		log.Println(p.Id)
 		name := PlayerNames[p.Id]
 		scoreText := fmt.Sprintf("%s: %d", name, 100)
 		for j, char := range scoreText {

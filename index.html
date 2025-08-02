@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Full Screen Buttons</title>
+    <style>
+	html, body {
+		height: 100%; /* Ensures html and body take full viewport height */
+		margin: 0;    /* Removes default body margin */
+		overflow: hidden; /* Prevents scrolling if content exceeds viewport */
+	}
+
+	.container {
+		display: flex; /* Enables flexbox layout */
+		height: 100%;  /* Makes the container fill the entire height of the body */
+		width: 100%;   /* Makes the container fill the entire width of the body */
+	}
+
+	.button {
+		width: 100%; /* Each button takes an equal share of the available space */
+		height: 100%;
+		border: none; /* Removes default button border */
+		font-size: 64px; /* Adjust font size as needed */
+		color: white; /* Text color */
+		cursor: pointer; /* Indicates it's clickable */
+		touch-action: manipulation;
+	}
+
+	.button:first-child {
+		background-color: #4CAF50; /* Green for the first button */
+	}
+
+	.button:last-child {
+		background-color: #008CBA; /* Blue for the second button */
+	}
+	</style>
+</head>
+<body>
+    <div class="container">
+	<button onclick="sendAction('l')" class="button">Left</button>
+	<button onclick="sendAction('r')" class="button">Right</button>
+    </div>
+    <script>
+	const ws = new WebSocket("/ws")
+	const wsMsgIntervalMs = 100;
+	let intervalId
+	let isOpen = false;
+	function sendAction(action) {
+		if(isOpen) {
+			ws.send(action)
+		}
+	}
+	ws.addEventListener("open", (event) => {
+		intervalId = setInterval(() => {
+			ws.send("_")
+		}, wsMsgIntervalMs)
+		isOpen = true;
+	});
+
+	ws.addEventListener("close", (event) => {
+		clearInterval(intervalId)
+	})
+
+    </script>
+</body>
+</html>
