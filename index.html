@@ -25,14 +25,7 @@
 		color: white; /* Text color */
 		cursor: pointer; /* Indicates it's clickable */
 		touch-action: manipulation;
-	}
-
-	.button:first-child {
-		background-color: #4CAF50; /* Green for the first button */
-	}
-
-	.button:last-child {
-		background-color: #008CBA; /* Blue for the second button */
+    background-color: black;
 	}
 	</style>
 </head>
@@ -58,10 +51,41 @@
 		isOpen = true;
 	});
 
+
+  ws.addEventListener("message", (event) => {
+    if (event.data.startsWith("c:")) {
+      const colorIndex = parseInt(event.data.split(":")[1], 10);
+      if (!isNaN(colorIndex) && colorIndex >= 0 && colorIndex < colorPalette.length) {
+      // change bg color of buttons based on the color colorIndex
+      document.querySelectorAll(".button").forEach(button => {
+        button.style.backgroundColor = colorPalette[colorIndex];
+      });
+      }
+    }
+  });
+
 	ws.addEventListener("close", (event) => {
 		clearInterval(intervalId)
-	})
+	});
 
+  const colorPalette = [
+    "#000000", // Black
+    "#800000", // Red
+    "#008000", // Green
+    "#808000", // Yellow
+    "#000080", // Blue
+    "#800080", // Magenta
+    "#008080", // Cyan
+    "#c0c0c0", // White
+    "#ff0000", // BrightRed
+    "#00ff00", // BrightGreen
+    "#ffff00", // BrightYellow
+    "#0000ff", // BrightBlue
+    "#ff00ff", // BrightMagenta
+    "#00ffff", // BrightCyan
+    "#ffffff",  // BrightWhite
+    "#808080" // BrightBlack (Gray)
+  ];
     </script>
 </body>
 </html>

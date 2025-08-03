@@ -37,8 +37,7 @@ type Game struct {
 }
 
 type PlayerService interface {
-	Join(uuid.UUID)
-	// Leave()
+	Join(uuid.UUID) PlayerID
 	ToggleIsRunning()
 	Close()
 	TurnLeft(uuid.UUID)
@@ -154,12 +153,12 @@ func (g *Game) TurnRight(u uuid.UUID) {
 	player.Direction = (player.Direction + 1) % 4
 }
 
-func (g *Game) Join(uid uuid.UUID) {
+func (g *Game) Join(uid uuid.UUID) PlayerID {
 	g.playersMutex.Lock()
 	defer g.playersMutex.Unlock()
 
 	if p := g.GetPlayer(uid); p != nil {
-		return
+		return p.Id
 	}
 
 	p := &Player{
@@ -172,6 +171,7 @@ func (g *Game) Join(uid uuid.UUID) {
 	g.claimStartingArea(p)
 	g.UIDToPID[uid] = p.Id
 	g.Players[p.Id] = p
+	return p.Id
 }
 
 func (g *Game) claimStartingArea(p *Player) {
