@@ -189,6 +189,7 @@ func (g *Game) claimStartingArea(p *Player) {
 			p.Score++
 		}
 	}
+	g.killPlayersWithZeroScore()
 }
 
 func (g *Game) getMinAvailablePlayerId() PlayerID {
@@ -255,6 +256,8 @@ func (g *Game) fillTrace(p *Player) {
 			}
 		}
 	}
+	g.killPlayersWithZeroScore()
+
 }
 
 func (g *Game) getTakenMask(p *Player) [][]bool {
@@ -312,6 +315,14 @@ func (g *Game) getScoreboard() []*Player {
 		return int(b.Score) - int(a.Score)
 	})
 	return scoreboard
+}
+
+func (g *Game) killPlayersWithZeroScore() {
+	for pID, player := range g.Players {
+		if player.Score == 0 {
+			g.killPlayer(pID)
+		}
+	}
 }
 
 func (g *Game) killPlayer(pID PlayerID) {
