@@ -38,6 +38,7 @@ const (
 	Solid           = '▓'
 	Striped         = '░'
 	Head            = '█'
+	Pipe            = '║'
 )
 
 type colorID uint8
@@ -172,7 +173,7 @@ func (r *Renderer) bufferScoreboard(g *Game, b [][]character) {
 	}
 
 	for i := range r.terminalHeight {
-		b[i][r.gameCols*2] = character{char: '║', colorID: 7}
+		b[i][r.gameCols*2] = character{char: Pipe, colorID: 7}
 	}
 
 	for i, p := range scoreboard {
