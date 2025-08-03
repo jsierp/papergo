@@ -127,7 +127,7 @@ func (r *Renderer) Close() {
 }
 
 func (r *Renderer) render(row int, col int, char string, color string) {
-	fmt.Printf(cursorTo, row, col)
+	fmt.Printf(cursorTo, row+1, col+1)
 	fmt.Printf("%s%s", color, char)
 }
 
@@ -167,16 +167,20 @@ func (r *Renderer) bufferScoreboard(g *Game, b [][]character) {
 
 	for j, char := range "SCOREBOARD" {
 		if j < scoreboardWidth-1 {
-			b[1][r.gameCols*2+2+j] = character{char: char, colorID: 7}
+			b[1][r.gameCols*2+4+j] = character{char: char, colorID: 7}
 		}
+	}
+
+	for i := range r.terminalHeight {
+		b[i][r.gameCols*2] = character{char: '║', colorID: 7}
 	}
 
 	for i, p := range scoreboard {
 		name := PlayerNames[p.Id]
-		scoreText := fmt.Sprintf("%s: %d", name, 100)
+		scoreText := fmt.Sprintf("%s: %d", name, p.Score)
 		for j, char := range scoreText {
 			if j < scoreboardWidth-1 {
-				b[i*2+3][r.gameCols*2+2+j] = character{char: char, colorID: colorID(p.Id)}
+				b[i*2+3][r.gameCols*2+4+j] = character{char: char, colorID: colorID(p.Id)}
 			}
 		}
 	}
