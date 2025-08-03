@@ -33,6 +33,7 @@ type Game struct {
 	Closing       bool
 	playersMutex  sync.Mutex
 	renderer      *Renderer
+	worldSize     int
 }
 
 type PlayerService interface {
@@ -73,12 +74,13 @@ const (
 func NewGame(renderer *Renderer) *Game {
 	width, height := renderer.GetGameSize()
 	g := &Game{
-		World:    NewWorld(width, height),
-		Height:   height,
-		Width:    width,
-		Players:  map[PlayerID]*Player{},
-		UIDToPID: map[uuid.UUID]PlayerID{},
-		renderer: renderer,
+		World:     NewWorld(width, height),
+		Height:    height,
+		Width:     width,
+		Players:   map[PlayerID]*Player{},
+		UIDToPID:  map[uuid.UUID]PlayerID{},
+		renderer:  renderer,
+		worldSize: width * height,
 	}
 	return g
 }
@@ -111,15 +113,16 @@ func (g *Game) updatePositions() {
 }
 
 func (g *Game) updatePlayerPosition(p *Player) {
+	delta := FrameDelta * (1. + 2*float64(p.Score)/float64(g.worldSize))
 	switch p.Direction {
 	case Up:
-		p.Y = max(0, p.Y-FrameDelta)
+		p.Y = max(0, p.Y-delta)
 	case Down:
-		p.Y = min(float64(g.Height)-eps, p.Y+FrameDelta)
+		p.Y = min(float64(g.Height)-eps, p.Y+delta)
 	case Right:
-		p.X = min(float64(g.Width)-eps, p.X+FrameDelta)
+		p.X = min(float64(g.Width)-eps, p.X+delta)
 	case Left:
-		p.X = max(0, p.X-FrameDelta)
+		p.X = max(0, p.X-delta)
 	}
 }
 
