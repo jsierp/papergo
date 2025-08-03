@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -61,8 +62,14 @@ func (h *HttpInputHandler) serveWebsocket(w http.ResponseWriter, req *http.Reque
 	}
 	defer conn.Close()
 
-	playerId := uuid.New()
-	h.playerService.Join(playerId)
+	uID := uuid.New()
+	pID := h.playerService.Join(uID)
+
+	err = conn.WriteMessage(websocket.TextMessage, fmt.Appendf([]byte{}, "c:%d", pID))
+	if err != nil {
+		log.Println("Error sending message:", err)
+		return
+	}
 
 	for {
 		_, msg, err := conn.ReadMessage()
@@ -73,9 +80,9 @@ func (h *HttpInputHandler) serveWebsocket(w http.ResponseWriter, req *http.Reque
 
 		switch string(msg) {
 		case "l":
-			h.playerService.TurnLeft(playerId)
+			h.playerService.TurnLeft(uID)
 		case "r":
-			h.playerService.TurnRight(playerId)
+			h.playerService.TurnRight(uID)
 		}
 	}
 }
